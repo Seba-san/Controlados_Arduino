@@ -1,7 +1,21 @@
+/*
+El objetivo de este programa es leer las rpm del motor por medio del encoder y enviarlas a matlab, para poder entender lo que esta pasando. Es a modo instructivo.
+Este programa no esta full testeado, esta en pleno desarrollo. Las funciones que estan OK son:
+Se esta probando la comunicacion con matlab incluyendo la convercion de caracteres. Aparentemente hay un problema en MATLAB, el codigo de arduino funciona bien.
+
+Esto es a futuro:
+
+
+
+
+
+ */
+
+
 #include <avr/interrupt.h> //Esto lo pongo porque decía el manual de avr que
 #include <avr/io.h>        //supuestamente lo necesito para las interrupciones
 
-#include "Controlados.h"; //Acá están las funciones propias para no tener
+#include "Controlados.h" //Acá están las funciones propias para no tener
                           //todo mezclado.
 //Controlados es la clase. Ahora necesito crear objetos de esta
 //clase:
@@ -13,10 +27,18 @@ Controlados controlados1;
                             //cada motor.
 #define preescaler 32
 #define cota 382//cota=32 hace que de 0 a aprox 100rpm asuma que la velocidad es cero.
-#define fclkio 16300000//DEFINIR UNIDAD $
+#define fclkio 16300000//DEFINIR UNIDAD //Frecuencia del nano
+// ############# Probandos cosas locas
+#define NOP __asm__ __volatile__ ("nop\n\t")
+
+//################
+
+
+
+
 
 float ticc,tocc;//Ver si lo necesito (y a las fc del final) o no$
-unsigned char trama_activa=0;//Lo pongo en unsigned char para que ocupe 1 
+unsigned char trama_activa=0;//Lo pongo en unsigned char para que ocupe 1
                              //byte (int ocupa 2)
 unsigned char nro_controlador;
 int cantOVerflow;//Variable que almacena la cantidad de veces que se desbordó
@@ -26,36 +48,41 @@ int cantOVerflow;//Variable que almacena la cantidad de veces que se desbordó
 unsigned char preescalerPorSoft=0;//Esta variable me permite aumentar por soft el
                                   //preescalador del timer 2.
 int TCNT2anterior=0;//Valor anterior del contador (para corregir la medición)
-int TCNT2actual=0;//Almaceno el valor del timer para que no me jodan posibles 
+int TCNT2actual=0;//Almaceno el valor del timer para que no me jodan posibles
                   //actualizaciones.
-float bufferVel[2*cantMarcasEncoder];//buffer donde almaceno las últimas 
+float bufferVel[2*cantMarcasEncoder];//buffer donde almaceno las últimas
                                      //velocidades calculadas.
-float velAngular=0;//última velocidad angular calculada. Lo separo del vector 
-                   //bufferVel para que no haya problemas por interrumpir en 
+float velAngular=0;//última velocidad angular calculada. Lo separo del vector
+                   //bufferVel para que no haya problemas por interrumpir en
                    //medio de una actualización de éste.
 float velDeseada=0;//Empieza detenido el motor.
 float error[2]={0,0},u[2]={0,0};
 
+// # Declarando Funciones
+void configTimer2Contador(void);
+
 void setup() {
   interruptOFF; // se desactivan las interrupciones para configurar.
   cantOVerflow=0;
-  Serial.begin(2000000); 
+  Serial.begin(2000000);
   controlados1.configPinesMotores();
   controlados1.modoStop();
   controlados1.configTimerMotores();
-  controlados1.configTimer2Contador();//Configuro el timer2 como contador con interrupción $VER: No estan en las librerias
-  controlados1.actualizarDutyCycleMotores(70,30); 
+  configTimer2Contador(); // la agrego a mano.
+  //controlados1.configTimer2Contador();//Configuro el timer2 como contador con interrupción $VER: No estan en las librerias
+  controlados1.actualizarDutyCycleMotores(70,30);
   controlados1.modoAdelante();
 
   //Interrupciones por estado en pin para lectura de los encoders:
-  bitWrite(PCICR,PCIE1,1); // Pin Change Interrupt Control Register ; Bit 1 – PCIE1: Pin Change Interrupt Enable 1; PCINT[14:8] 
+  bitWrite(PCICR,PCIE1,1); // Pin Change Interrupt Control Register ; Bit 1 – PCIE1: Pin Change Interrupt Enable 1; PCINT[14:8]
   //Ver si esto lo ponemos en la librería$
   interruptON;//Activo las interrupciones
   pinMode(A0, INPUT);
 }
 
 void loop() {
-  
+  NOP;
+
 }
 
 void serialEvent() {
@@ -85,8 +112,7 @@ void serialEvent() {
   }
 }
 
-ISR (TIMER2_COMPA_vect)//Interrupción por Timer2 para definir frec de muestreo del sist cte $VER: interrupcion por comparacion, no por overflow. 
-{ 
+ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo del sist cte; Resetea con el valor de comparacion del A
   //COMPLETAR$
   cantOVerflow++;
   if(cantOVerflow>cota){
@@ -94,8 +120,9 @@ ISR (TIMER2_COMPA_vect)//Interrupción por Timer2 para definir frec de muestreo 
                       //que pasó demasiado tiempo y que tiene que asumir
                       //que la velocidad es 0.
   }
-  preescalerPorSoft++;;//Esta variable me permite aumentar por soft el preescalador del timer
-  if(preescalerPorSoft>=10){
+  preescalerPorSoft++;//Esta variable me permite aumentar por soft el preescalador del timer 
+  if(preescalerPorSoft>=1){
+    preescalerPorSoft=0;
     error[1]=velDeseada-velAngular;//ek=wdeseado-wmedido
     u[1]=ControladorMotor(error[0],error[1],u[0]);
     error[0]=error[1];//ek-1. El error que se utilizo en este ciclo va a ser el error anterior
@@ -103,7 +130,7 @@ ISR (TIMER2_COMPA_vect)//Interrupción por Timer2 para definir frec de muestreo 
     if(velDeseada==0){u[1]=0;}//Esta parte permitiría apagar el motor cuando funciona el control
     //Poner de nuevo cuando terminen las pruebas$$
     //Serial.println(velAngular);//Le envío a la compu el valor de velocidad actual
-  
+
     //PARTE DE PRUEBA, BORRAR!!!!$$
     //Hay que fijar la cant de cifras!!!!!$$
     Serial.print(cantOVerflow);
@@ -117,7 +144,7 @@ float ControladorMotor(float ek_1,float ek, float uk_1)
 //Esta rutina implementa el controlador para la velocidad del motor.
     float uk;
     if(nro_controlador){
-      uk=uk_1+0.008276*ek-0.007094*ek_1; // $VER: valores obtenidos por medio de? 
+      uk=uk_1+0.008276*ek-0.007094*ek_1; //  A modo ilustrativo.
     }
     else{
       //COMPLETAR$$
@@ -131,12 +158,12 @@ ISR(PCINT1_vect){
 }
 void medirVelocidad(unsigned char interrupcion)
 {
-  //Arranco determinando el conteo real de ciclos del timer2 tranascurridos desde la última 
+  //Arranco determinando el conteo real de ciclos del timer2 tranascurridos desde la última
   //interrupción:
   TCNT2actual=TCNT2;//Almaceno enseguida el valor del timer para que no cambie mientras hago
                     //las cuentas.
   int suma=0;
-  //Corro los valores de w en el buffer un lugar y voy sumando los valores para después 
+  //Corro los valores de w en el buffer un lugar y voy sumando los valores para después
   //calcular el promedio de velocidades:
   for(int k=0;k++;k<2*cantMarcasEncoder-1)
   {
@@ -159,7 +186,7 @@ void medirVelocidad(unsigned char interrupcion)
   TCNT2anterior=TCNT2actual;//Ahora el valor actual pasa a ser el anterior de la próxima
                             //interrupción.
   suma=suma+bufferVel[2*cantMarcasEncoder-1];
-  velAngular=suma/(2*cantMarcasEncoder);//Actualizo el valor de velocidad medida como el 
+  velAngular=suma/(2*cantMarcasEncoder);//Actualizo el valor de velocidad medida como el
                                         //promedio de las últimas mediciones (todas las del
                                         //buffer).
   //Obs: para el correcto funcionamiento de la rutina se requiere que no haya interrupción
@@ -171,5 +198,17 @@ void tic(){
 }
 
 void toc(){
-  tocc=micros()-ticc;    
+  tocc=micros()-ticc;
 }
+
+void configTimer2Contador(void){
+  //Clear Timer on Compare Match (CTC) Mode  (WGM2[2:0] = 2) (pag 195)
+  bitWrite(TCCR2A,1,1); // Modo CTC
+ // ## prescaler en 1:32
+  bitWrite(TCCR2B,0,1); // Prescaler 32
+  bitWrite(TCCR2B,1,1); // Prescaler 32
+  OCR2A=51; // De esta forma genera un overflow a 10Kz, la ecuacion es: Freq=16.3 10^6 / (32 * OCR2A), osea que: OCR2A=16.3 10^6 / (32 * Freq)
+  OCR2B=0; // No afecta, por el modo de configuracion CTC.
+  bitWrite(TIMSK2,1,1); // TBit 1 – OCIEA: Timer/Counter2, Output Compare A Match Interrupt Enable
+
+  }
