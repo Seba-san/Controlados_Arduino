@@ -39,11 +39,11 @@ float error[2]={0,0},u[2]={0,0};
 void setup() {
   interruptOFF; // se desactivan las interrupciones para configurar.
   cantOVerflow=0;
-  Serial.begin(2000000); // opens serial port, data rate 9600 bps.
+  Serial.begin(2000000); 
   controlados1.configPinesMotores();
   controlados1.modoStop();
   controlados1.configTimerMotores();
-  controlados1.configTimer2Contador();//Configuro el timer2 como contador con interrupción
+  controlados1.configTimer2Contador();//Configuro el timer2 como contador con interrupción $VER: No estan en las librerias
   controlados1.actualizarDutyCycleMotores(70,30); 
   controlados1.modoAdelante();
 
@@ -85,7 +85,7 @@ void serialEvent() {
   }
 }
 
-ISR (TIMER2_COMPA_vect)//Interrupción por Timer2 para definir frec de muestreo del sist cte
+ISR (TIMER2_COMPA_vect)//Interrupción por Timer2 para definir frec de muestreo del sist cte $VER: interrupcion por comparacion, no por overflow. 
 { 
   //COMPLETAR$
   cantOVerflow++;
@@ -117,7 +117,7 @@ float ControladorMotor(float ek_1,float ek, float uk_1)
 //Esta rutina implementa el controlador para la velocidad del motor.
     float uk;
     if(nro_controlador){
-      uk=uk_1+0.008276*ek-0.007094*ek_1;
+      uk=uk_1+0.008276*ek-0.007094*ek_1; // $VER: valores obtenidos por medio de? 
     }
     else{
       //COMPLETAR$$
