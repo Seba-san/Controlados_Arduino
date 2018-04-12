@@ -31,7 +31,7 @@ class Controlados
 	int leerSensorDeLinea();
 	
 	//Configuración timer2 como contador:
-	void configTimer2Contador();
+	void configTimer2Contador(long);
 	
   private: //Funciones y variables internas
 	int _timerMotores;//Para indicar cuál timer fue configurado para los motores.
