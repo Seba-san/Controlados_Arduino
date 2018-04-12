@@ -5,7 +5,7 @@ Librería para el Trabajo Final de Controlados
 //(https://www.arduino.cc/en/Hacking/LibraryTutorial),
 //pero ni idea por qué ni si está bien:
 
-#include <Controlados.h>
+#include "Controlados.h"
 #include <Arduino.h>
 
 //Formato del define: #define NombreVariable Valor
@@ -246,50 +246,60 @@ int Controlados::leerSensorDeLinea()
 	//Si hay más de
 }
 
-void Controlados::configTimer2Contador()
+void Controlados::configTimer2Contador(long Frecuencia)
 {
-	//Esta función configura el timer2 para funcionar como contador.
-	//Para ello se debe usar el modo CTC, en el cual la frecuencia
-	//resultante según el datasheet es:
-	//                 fOCnx=fclkio/(2N(1+OCRnx))
-	//Esta frecuencia es la que tendríamos si ponemos la salida OC2A
-	//en toogle, por lo tanto el tiempo entre interrupciones es la mitad
-	//del periodo indicado por esta ecuación. En limpio:
-	//				   Tint=N(1+OCRnx)/fclkio
-	//Se selecciona, además, para trabajar con interrupción por timer2.
-	//La activación de las interrupciones globales se realiza por fuera
-	//de esta función.
-	//Como el timer2 se va a usar de forma compartida para determinar la
-	//frecuencia de muestreo y para hacer mediciones de tiempo, pongo
-	//el preescalador bajo para medir el menor tiempo posible, y el
-	//preescalador que necesitaría para la frecuencia de muestreo lo 
-	//hago por soft usando una variable auxiliar.
-	
+	/* Frecuencia es un valor que va desde un desaconsejable 500000 hasta 1997 
+  *  El error en esta frecuencia esta dado por el redondeo
+   * 
+   * Esta función configura el timer2 para funcionar como contador.
+	Para ello se debe usar el modo CTC, en el cual la frecuencia
+	resultante según el datasheet es:
+	                 fOCnx=fclkio/(2N(1+OCRnx))
+  Ver :Clear Timer on Compare Match (CTC) Mode  (WGM2[2:0] = 2) (pag 195)
+  
+	Esta frecuencia es la que tendríamos si ponemos la salida OC2A
+	en toogle, por lo tanto el tiempo entre interrupciones es la mitad
+	del periodo indicado por esta ecuación. En limpio:
+					   Tint=N(1+OCRnx)/fclkio
+	Se selecciona, además, para trabajar con interrupción por timer2.
+	La activación de las interrupciones globales se realiza por fuera
+	de esta función.
+	Como el timer2 se va a usar de forma compartida para determinar la
+	frecuencia de muestreo y para hacer mediciones de tiempo, pongo
+	el preescalador bajo para medir el menor tiempo posible, y el
+	preescalador que necesitaría para la frecuencia de muestreo lo 
+	hago por soft usando una variable auxiliar.
+	*/
 	TCCR2B=0x00; //Deshabilitamos el timer durante la configuración.
-	//Para elegir el modo de CTC hay que poner WGM2[2:0]=010. Por otro
-	//lado, para desactivar las salidas asociadas al timer2 hay que 
-	//poner COM2A[1:0]=COM2B[1:0]=00. Como el registro TCCR2A tiene los
-	//4 MSbits COM2A[1:0] y COM2B[1:0], seguidos de 2 bits no utilizados,
-	//terminando con WGM2[1:0], configuramos:
+	/*Para elegir el modo de CTC hay que poner WGM2[2:0]=010. Por otro
+	lado, para desactivar las salidas asociadas al timer2 hay que 
+	poner COM2A[1:0]=COM2B[1:0]=00. Como el registro TCCR2A tiene los
+	4 MSbits COM2A[1:0] y COM2B[1:0], seguidos de 2 bits no utilizados,
+	terminando con WGM2[1:0], configuramos:
+ */
 	TCCR2A=0b00000010;
-	//Queremos obtener un periodo de muestreo que sea un múltiplo del
-	//valor que genera la interrupción por timer. Buscamos que ese valor
-	//sea de 10us y después ajustamos el valor final de tiempo de muestreo
-	//en el código principal cuando se genera la interrupción.
-	//Siendo fclkio=16.3MHz, tomando OCR2A=50 obtenemos Tint=0.1ms, 
-	//aproximadamente.
-	OCR2A=50;
-	//Para habilitar las interrupciones por timer2 usamos el registro
-	//TIMSK2. El único bit que nos interesa es el bit 1, OCIEA que activa
-	//interrupciones por compare match con el registro OCR2A.
-	//Antes de activar la interrupción bajamos la bandera correspondiente
-	//en el registro TIFR2.
-	TIFR2=0;
-	TIMSK2=0b00000010;
-	//En el registro TCCR2B los bits 7 y 6 fuerzan un compare match al
-	//escribírseles un 1;como no nos sirven los dejamos en 0. Los bits
-	//5 y 4 no se usan. El bit 3 es WGM22, por lo que debe valer 0. Los
-	//bits 2 a 0 son CS2[2:0] que seleccionan la fuente del clock. Para
-	//poner el clock source interno con preescalador 32 ponemos 011.
+	/*Queremos obtener un periodo de muestreo que sea un múltiplo del
+	valor que genera la interrupción por timer. Buscamos que ese valor
+	sea de 10us y después ajustamos el valor final de tiempo de muestreo
+	en el código principal cuando se genera la interrupción.
+	Siendo fclkio=16.3MHz, tomando OCR2A=50 obtenemos Tint=0.1ms, 
+	aproximadamente.
+  */
+	OCR2A=round(16300000/(32*Frecuencia));
+	/*Para habilitar las interrupciones por timer2 usamos el registro
+	TIMSK2. El único bit que nos interesa es el bit 1, OCIEA que activa
+	interrupciones por compare match con el registro OCR2A.
+	Antes de activar la interrupción bajamos la bandera correspondiente
+	en el registro TIFR2. Para bajarla hay que setearla (ver pag 212 datasheet).
+  */ 
+	TIFR2=1;
+	bitWrite(TIMSK2,1,1); // TBit 1 – OCIEA: Timer/Counter2, Output Compare A Match Interrupt Enable
+  /*
+	En el registro TCCR2B los bits 7 y 6 fuerzan un compare match al
+	escribírseles un 1;como no nos sirven los dejamos en 0. Los bits
+	5 y 4 no se usan. El bit 3 es WGM22, por lo que debe valer 0. Los
+	bits 2 a 0 son CS2[2:0] que seleccionan la fuente del clock. Para
+	poner el clock source interno con preescalador 32 ponemos 011.
+  */
 	TCCR2B=0b00000011;
 }
