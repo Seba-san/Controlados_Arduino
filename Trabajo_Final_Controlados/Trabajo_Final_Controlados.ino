@@ -30,7 +30,8 @@ Controlados controlados1;
 #define fclkio 16300000//DEFINIR UNIDAD //Frecuencia del nano
 // ############# Probandos cosas locas
 #define NOP __asm__ __volatile__ ("nop\n\t")
-
+#define SalidaTest 3
+bool estado=1;
 //################
 
 
@@ -68,7 +69,7 @@ void setup() {
   controlados1.configPinesMotores();
   controlados1.modoStop();
   controlados1.configTimerMotores();
-  configTimer2Contador(); // la agrego a mano.
+ 
   //controlados1.configTimer2Contador();//Configuro el timer2 como contador con interrupción $VER: No estan en las librerias
   controlados1.actualizarDutyCycleMotores(70,30);
   controlados1.modoAdelante();
@@ -78,13 +79,19 @@ void setup() {
   //Ver si esto lo ponemos en la librería$
   interruptON;//Activo las interrupciones
   pinMode(A0, INPUT);
+  // $Prueba
+  pinMode(SalidaTest, OUTPUT);
+   configTimer2Contador(); // la agrego a mano.
 }
 
 void loop() {
   NOP;
+  Serial.print(TCNT2,DEC);
+    Serial.print(" ");
+    Serial.println(" cora ");
 
 }
-
+/*
 void serialEvent() {
   int dato;
   if (Serial.available() > 0) {
@@ -111,10 +118,12 @@ void serialEvent() {
     }
   }
 }
-
+*/
 ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo del sist cte; Resetea con el valor de comparacion del A
   //COMPLETAR$
-  cantOVerflow++;
+  
+  /*
+   * cantOVerflow++;
   if(cantOVerflow>cota){
     medirVelocidad(0);//Llamo a la rutina de medición de vel indicándole
                       //que pasó demasiado tiempo y que tiene que asumir
@@ -133,12 +142,16 @@ ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo
 
     //PARTE DE PRUEBA, BORRAR!!!!$$
     //Hay que fijar la cant de cifras!!!!!$$
-    Serial.print(cantOVerflow);
-    Serial.print(' ');//Caracter para separar datos (space=SP=dec32=0x20)
-    Serial.println(0);//Simulo que envío la señal de control (siempre 0)
+//    Serial.print(cantOVerflow);
+//    Serial.print(' ');//Caracter para separar datos (space=SP=dec32=0x20)
+//    Serial.println(0);//Simulo que envío la señal de control (siempre 0)
   }
+  */
+  estado=!estado;
+  digitalWrite(SalidaTest,estado);
+  Serial.println(TCNT2,DEC);
 }
-
+/*
 float ControladorMotor(float ek_1,float ek, float uk_1)
 {
 //Esta rutina implementa el controlador para la velocidad del motor.
@@ -200,14 +213,17 @@ void tic(){
 void toc(){
   tocc=micros()-ticc;
 }
-
+*/
 void configTimer2Contador(void){
   //Clear Timer on Compare Match (CTC) Mode  (WGM2[2:0] = 2) (pag 195)
-  bitWrite(TCCR2A,1,1); // Modo CTC
+  //bitWrite(TCCR2A,1,0); // Modo CTC
+  
+  TCCR2A=0b00000010;
  // ## prescaler en 1:32
-  bitWrite(TCCR2B,0,1); // Prescaler 32
-  bitWrite(TCCR2B,1,1); // Prescaler 32
-  OCR2A=51; // De esta forma genera un overflow a 10Kz, la ecuacion es: Freq=16.3 10^6 / (32 * OCR2A), osea que: OCR2A=16.3 10^6 / (32 * Freq)
+  //bitWrite(TCCR2B,0,1); // Prescaler 32
+  //bitWrite(TCCR2B,1,1); // Prescaler 32
+   TCCR2B|=0b00000011;
+  OCR2A=100;//51 // De esta forma genera un overflow a 10Kz, la ecuacion es: Freq=16.3 10^6 / (32 * OCR2A), osea que: OCR2A=16.3 10^6 / (32 * Freq)
   OCR2B=0; // No afecta, por el modo de configuracion CTC.
   bitWrite(TIMSK2,1,1); // TBit 1 – OCIEA: Timer/Counter2, Output Compare A Match Interrupt Enable
 

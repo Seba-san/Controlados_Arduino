@@ -19,7 +19,7 @@ class Controlados
 	//~Controlados(), pero como la librería que usé de base no lo tiene, lo 
 	//dejo así por ahora.
 
-	//Configuración del timer para los motores:
+	//Configuración del timer1 para los motores:
 	void configPinesMotores();
 	void configTimerMotores();
     void actualizarDutyCycleMotores(int dutyCycleA,int dutyCycleB);  
@@ -29,6 +29,9 @@ class Controlados
 	
 	void configPinesSensorLinea();
 	int leerSensorDeLinea();
+	
+	//Configuración timer2 como contador:
+	void configTimer2Contador();
 	
   private: //Funciones y variables internas
 	int _timerMotores;//Para indicar cuál timer fue configurado para los motores.
