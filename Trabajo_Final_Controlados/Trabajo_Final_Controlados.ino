@@ -55,8 +55,8 @@ int TCNT2actual=0;//Almaceno el valor del timer para que no me jodan posibles
                   //actualizaciones.
 
 int    cantOVerflow_actual=0;     //Valor anterior del contador (para corregir la medición), correspondiente al TCNT2anterior.          
-unsigned long  bufferVel[2*cantMarcasEncoder];//buffer donde almaceno las últimas velocidades calculadas.
-unsigned long cuco=0;
+float  bufferVel[2*cantMarcasEncoder];//buffer donde almaceno las últimas velocidades calculadas.
+
 float velAngular=0;//última velocidad angular calculada. Lo separo del vector
                    //bufferVel para que no haya problemas por interrumpir en
                    //medio de una actualización de éste.
@@ -103,16 +103,7 @@ void loop() {
 if (bitRead(Bandera,0)){
   //Serial.println  (Bandera,BIN);
   bitWrite(Bandera,0,0);
- // Serial.println(bufferVel[2*cantMarcasEncoder-1],DEC); 
-  Serial.print(cantOVerflow,DEC);
-  Serial.print(" ");
-  Serial.print(TCNT2actual,DEC);
-  Serial.print(" ");
-  Serial.print(TCNT2anterior,DEC); 
-  Serial.print(" ");
-  Serial.print(cantOVerflow_actual,DEC); 
-  Serial.print(" ");
-  Serial.println(cuco,DEC);
+  Serial.println(bufferVel[2*cantMarcasEncoder-1],DEC);
   } 
   if (bitRead(Bandera,1)){
   // Serial.println  (Bandera,BIN);
@@ -248,10 +239,8 @@ void medirVelocidad(unsigned char interrupcion)
   //Al terminar el bucle bufferVel tiene los últimos dos valores iguales (los dos de más a
   //la izquierda). Esto cambia a continuación con la actualización del valor más a la derecha:
   if(interrupcion){
-    interruptOFF;
-    cuco=(OCR2A*cantOVerflow_actual*32);// Es para contar ciclos
-    interruptON;
-    //bufferVel[2*cantMarcasEncoder-1]=preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior)*fclkio2;// Es para contar ciclos
+     bufferVel[2*cantMarcasEncoder-1]=float(fclkio)/(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
+   // bufferVel[2*cantMarcasEncoder-1]=preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior)*fclkio2;// Es para contar ciclos
     //bufferVel[2*cantMarcasEncoder-1]=fclkio/(2*cantMarcasEncoder*preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior));
                               //Unidad de medición: ciclos/seg.
     //bufferVel[2*cantMarcasEncoder-1]=60*fclkio/(2*cantMarcasEncoder*preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior));
