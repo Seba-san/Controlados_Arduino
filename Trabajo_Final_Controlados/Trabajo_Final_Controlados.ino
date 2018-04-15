@@ -103,6 +103,8 @@ void loop() {
 if (bitRead(Bandera,0)){
   //Serial.println  (Bandera,BIN);
   bitWrite(Bandera,0,0);
+  Serial.print(TCNT2,DEC);
+  Serial.print(" ");
   Serial.println(bufferVel[2*cantMarcasEncoder-1],DEC);
   } 
   if (bitRead(Bandera,1)){
@@ -117,11 +119,6 @@ if (bitRead(Bandera,0)){
   medirVelocidad(1);      
   } 
    
-  /*
-  Serial.print(TCNT2,DEC);
-    Serial.print(" ");
-    Serial.println(" cora ");
-*/
 }
 /*
 void serialEvent() {
@@ -186,10 +183,7 @@ ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo
     Serial.println(0);//Simulo que envío la señal de control (siempre 0)
     
   }
-  */
-  
- // Serial.println(TCNT2,DEC);
- //Serial.println(velAngular,DEC);     
+  */ 
       
 }
 /*
@@ -211,7 +205,10 @@ ISR(PCINT1_vect){
  /*
   * Hay que verificar donde fue el cambio de estado, porque al tener 2 ruedas, no se sabe de donde provino (habria que hacer una comparacion manual)
   */
-  TCNT2actual=TCNT2;
+  // #### Esto es nuevo
+  TCNT2anterior=TCNT2actual;//Ahora el valor actual pasa a ser el anterior de la próxima interrupción.
+   // ### Esto es nuevo                            
+  TCNT2actual=TCNT2;//Almaceno enseguida el valor del timer para que no cambie mientras hago las cuentas.                   
   cantOVerflow_actual=cantOVerflow;
     //medirVelocidad(1);
     bitWrite(Bandera,2,1);
@@ -222,8 +219,7 @@ void medirVelocidad(unsigned char interrupcion)
 {
   //Arranco determinando el conteo real de ciclos del timer2 tranascurridos desde la última
   //interrupción:
-  //TCNT2actual=TCNT2;//Almaceno enseguida el valor del timer para que no cambie mientras hago
-                    //las cuentas.
+  //TCNT2actual=TCNT2;
   cantOVerflow=0;//Reseteo el valor de cantidad de interrupciones ocurridas por timer 2
   
   int suma=0;
@@ -239,7 +235,8 @@ void medirVelocidad(unsigned char interrupcion)
   //Al terminar el bucle bufferVel tiene los últimos dos valores iguales (los dos de más a
   //la izquierda). Esto cambia a continuación con la actualización del valor más a la derecha:
   if(interrupcion){
-     bufferVel[2*cantMarcasEncoder-1]=float(fclkio)/(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
+    bufferVel[2*cantMarcasEncoder-1]=(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
+    // bufferVel[2*cantMarcasEncoder-1]=float(fclkio)/(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
    // bufferVel[2*cantMarcasEncoder-1]=preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior)*fclkio2;// Es para contar ciclos
     //bufferVel[2*cantMarcasEncoder-1]=fclkio/(2*cantMarcasEncoder*preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior));
                               //Unidad de medición: ciclos/seg.
@@ -254,8 +251,7 @@ void medirVelocidad(unsigned char interrupcion)
   }
 
 
-  TCNT2anterior=TCNT2actual;//Ahora el valor actual pasa a ser el anterior de la próxima
-                            //interrupción.
+ 
                             /*
   suma=suma+bufferVel[2*cantMarcasEncoder-1];
   velAngular=suma/(2*cantMarcasEncoder);//Actualizo el valor de velocidad medida como el
