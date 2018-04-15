@@ -103,7 +103,7 @@ void loop() {
 if (bitRead(Bandera,0)){
   //Serial.println  (Bandera,BIN);
   bitWrite(Bandera,0,0);
-  Serial.print(TCNT2,DEC);
+  Serial.print(velAngular,DEC);
   Serial.print(" ");
   Serial.println(bufferVel[2*cantMarcasEncoder-1],DEC);
   } 
@@ -251,16 +251,16 @@ void medirVelocidad(unsigned char interrupcion)
   }
 
 
- 
-                            /*
+ /*
+                            
   suma=suma+bufferVel[2*cantMarcasEncoder-1];
   velAngular=suma/(2*cantMarcasEncoder);//Actualizo el valor de velocidad medida como el
                                         //promedio de las últimas mediciones (todas las del
                                         //buffer).
-                             
+            */                 
   //Obs: para el correcto funcionamiento de la rutina se requiere que no haya interrupción
   //por overflow en el timer 2 durante la ejecución de estas instrucciones
-  */
+  
 }
 /*
 void tic(){
