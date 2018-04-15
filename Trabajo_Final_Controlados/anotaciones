@@ -1,0 +1,8 @@
+Haciendo mediciones, y probando cosas conclui 2 cosas: 
+use una compuerta 4093 con smith trigger. Eso me discretizo bastante bien la señal.
+Si aprovecho la luz ambienta como generador de señal, puedo medir la frecuencia de las pulsaciones de la luz. Si uso la variable F_CPU (variable del micro) esta es 16Mhz y la frecuencia calculada da muy bien (Y).
+
+
+En esta linea:  velAngular=float(F_CPU)*float(2*cantMarcasEncoder)/suma;//Actualizo el valor de velocidad medida como el promedio de las últimas mediciones (todas las del buffer).
+
+no hay que dividirlo por la cantidad de marcas del encoder, ya que lo que intereza es la rebolucion, osea hay que sumar las ultimas 16, eso va a dar el periodo de una rebolucion. No intereza saber el promedio por pulso... obviamente eso va a dar muy ruidoso.

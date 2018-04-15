@@ -26,7 +26,7 @@ Controlados controlados1;
 #define cantMarcasEncoder 8 //Es la cantidad de huecos que tiene el encoder de
                             //cada motor.
 #define FsEncoders 2000
-#define preescaler 32
+#define preescaler 32//32
 #define cota 382//cota=32 hace que de 0 a aprox 100rpm asuma que la velocidad es cero.
 #define fclkio 16300000//DEFINIR UNIDAD //Frecuencia del nano
 #define fclkio2 1000000000/16300000
@@ -34,6 +34,8 @@ Controlados controlados1;
 #define NOP __asm__ __volatile__ ("nop\n\t")
 #define SalidaTest 3
 bool estado=0,estado2=0;
+ //unsigned long suma=0;//float suma=0;
+ float frecuencia=0;
 //################
 
 
@@ -55,11 +57,9 @@ int TCNT2actual=0;//Almaceno el valor del timer para que no me jodan posibles
                   //actualizaciones.
 
 int    cantOVerflow_actual=0;     //Valor anterior del contador (para corregir la medición), correspondiente al TCNT2anterior.          
-float  bufferVel[2*cantMarcasEncoder];//buffer donde almaceno las últimas velocidades calculadas.
+unsigned long  bufferVel[2*cantMarcasEncoder];//buffer donde almaceno las últimas velocidades calculadas.
 
-float velAngular=0;//última velocidad angular calculada. Lo separo del vector
-                   //bufferVel para que no haya problemas por interrumpir en
-                   //medio de una actualización de éste.
+float velAngular=0;//última velocidad angular calculada. Lo separo del vector bufferVel para que no haya problemas por interrumpir en medio de una actualización de éste.
 float velDeseada=0;//Empieza detenido el motor.
 float error[2]={0,0},u[2]={0,0};
 
@@ -100,23 +100,41 @@ void setup() {
 void loop() {
   //OCR2A*cantOVerflow+TCNT2actual-TCNT2anterior)*preescaler
   NOP;
-if (bitRead(Bandera,0)){
+if (bitRead(Bandera,0)){ // timer 2 overflow
   //Serial.println  (Bandera,BIN);
   bitWrite(Bandera,0,0);
-  Serial.print(velAngular,DEC);
-  Serial.print(" ");
-  Serial.println(bufferVel[2*cantMarcasEncoder-1],DEC);
+  
   } 
-  if (bitRead(Bandera,1)){
+  if (bitRead(Bandera,1)){ // Entra cuando no registra cambio en la entrada
   // Serial.println  (Bandera,BIN);
   bitWrite(Bandera,1,0);
   medirVelocidad(0);   
 
   } 
-  if (bitRead(Bandera,2)){
+  if (bitRead(Bandera,2)){ // se registra cambio en la entrada
   //  Serial.println  (Bandera,BIN);
   bitWrite(Bandera,2,0);
-  medirVelocidad(1);      
+  medirVelocidad(1);  
+  //Serial.print(velAngular,DEC);
+  //Serial.print(frecuencia,DEC);
+  /*
+  for (int i=0;i<16;i++){
+    Serial.print(bufferVel[i],DEC);
+    Serial.print(" ");
+    }
+    Serial.println("listo");
+    */
+  /*Serial.print(bufferVel[15],DEC);
+  Serial.print(" ");
+  Serial.print(suma,DEC);
+  Serial.print(" ");
+  Serial.print(velAngular,DEC);
+  /*Serial.print(" ");*/
+  Serial.print(frecuencia,DEC);
+  Serial.print(" "); 
+  //Serial.print(F_CPU ,DEC);
+   // Serial.print(" "); 
+  Serial.println(velAngular,DEC);   
   } 
    
 }
@@ -150,13 +168,7 @@ void serialEvent() {
 */
 ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo del sist cte; Resetea con el valor de comparacion del A
   //COMPLETAR$
-  bitWrite(Bandera,0,1);
-  estado=!estado;
-  if (estado){
-    estado2=!estado2;
-  digitalWrite(SalidaTest,estado2);
-  }
-   cantOVerflow++;
+  cantOVerflow++;
   if(cantOVerflow>cota){
    bitWrite(Bandera,1,1);
    TCNT2actual=TCNT2;
@@ -164,6 +176,13 @@ ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo
                       //que pasó demasiado tiempo y que tiene que asumir
                       //que la velocidad es 0.
   }
+  bitWrite(Bandera,0,1);
+  estado=!estado;
+  if (estado){
+    estado2=!estado2;
+  digitalWrite(SalidaTest,estado2);
+  }
+   
   preescalerPorSoft++;//Esta variable me permite aumentar por soft el preescalador del timer 
  /*
   if(preescalerPorSoft>=10){
@@ -222,25 +241,24 @@ void medirVelocidad(unsigned char interrupcion)
   //TCNT2actual=TCNT2;
   cantOVerflow=0;//Reseteo el valor de cantidad de interrupciones ocurridas por timer 2
   
-  int suma=0;
-  //Corro los valores de w en el buffer un lugar y voy sumando los valores para después
-  //calcular el promedio de velocidades:
-  /*
-  for(int k=0;k++;k<(2*cantMarcasEncoder-1))
+unsigned long suma=0;
+  //Corro los valores de w en el buffer un lugar y voy sumando los valores para después calcular el promedio de velocidades:
+  
+  for(int k=0;k<(2*cantMarcasEncoder-1);k++)
   {
     bufferVel[k]=bufferVel[k+1];//Desplazamiento a la derecha de los datos del buffer
     suma=suma+bufferVel[k];
   }
-  */
+  
   //Al terminar el bucle bufferVel tiene los últimos dos valores iguales (los dos de más a
   //la izquierda). Esto cambia a continuación con la actualización del valor más a la derecha:
   if(interrupcion){
     bufferVel[2*cantMarcasEncoder-1]=(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
-    // bufferVel[2*cantMarcasEncoder-1]=float(fclkio)/(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
+     //bufferVel[2*cantMarcasEncoder-1]=float(fclkio)/(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
    // bufferVel[2*cantMarcasEncoder-1]=preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior)*fclkio2;// Es para contar ciclos
     //bufferVel[2*cantMarcasEncoder-1]=fclkio/(2*cantMarcasEncoder*preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior));
                               //Unidad de medición: ciclos/seg.
-    //bufferVel[2*cantMarcasEncoder-1]=60*fclkio/(2*cantMarcasEncoder*preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior));
+   // bufferVel[2*cantMarcasEncoder-1]=60.0*float(fclkio)/(float(2*cantMarcasEncoder*preescaler)*(float(cantOVerflow_actual*OCR2A)-TCNT2anterior+TCNT2actual));
                               //Unidad de medición: rpm.
   }
   else{
@@ -251,13 +269,14 @@ void medirVelocidad(unsigned char interrupcion)
   }
 
 
- /*
+ 
                             
-  suma=suma+bufferVel[2*cantMarcasEncoder-1];
-  velAngular=suma/(2*cantMarcasEncoder);//Actualizo el valor de velocidad medida como el
-                                        //promedio de las últimas mediciones (todas las del
-                                        //buffer).
-            */                 
+  suma=suma+bufferVel[(2*cantMarcasEncoder-1)];
+  //velAngular=float(F_CPU)*float(2*cantMarcasEncoder)/suma;//Actualizo el valor de velocidad medida como el promedio de las últimas mediciones (todas las del buffer).
+  velAngular=float(F_CPU)/suma;//esto da en ciclos por segundo. Si se multiplica por 60 da en ciclos por minuto
+  
+  //frecuencia= float(fclkio)/(2*velAngular)*60.0;  
+  frecuencia=suma/16;                 
   //Obs: para el correcto funcionamiento de la rutina se requiere que no haya interrupción
   //por overflow en el timer 2 durante la ejecución de estas instrucciones
   
