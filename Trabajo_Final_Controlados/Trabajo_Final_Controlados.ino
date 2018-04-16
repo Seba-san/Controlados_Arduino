@@ -20,7 +20,7 @@ const int cota = 382;//cota=32 hace que de 0 a aprox 100rpm asuma que la velocid
 // ############# Probandos cosas locas
 #define NOP __asm__ __volatile__ ("nop\n\t")
 #define SalidaTest 3
-bool estado=0,estado2=0;
+bool estado=0,estado2=0,estado3=0;
  //unsigned long suma=0;//float suma=0;
  float frecuencia=0;
 //################
@@ -44,7 +44,9 @@ float error[2]={0,0},u[2]={0,0};
 // #   #   #   # Variable Basura
 
 int Bandera=0; // bandera para administrar procesos fuera de interrupciones  
-
+float variancia=0;
+float media=0, auxiliar1=0;
+ float velAngular2[16];
 // #   #   #   # Declaracion de Funciones
 
 void medirVelocidad(unsigned char);
@@ -97,12 +99,21 @@ if (bitRead(Bandera,0)){ // timer 2 overflow
   Serial.print(suma,DEC);
   Serial.print(" ");
   Serial.print(velAngular,DEC);
-  /*Serial.print(" ");*/
+  Serial.print(" ");
   Serial.print(frecuencia,DEC);
-  Serial.print(" "); 
+  Serial.print(" "); */
   //Serial.print(F_CPU ,DEC);
    // Serial.print(" "); 
-  Serial.println(velAngular,DEC);   
+   //estado3=!estado3;
+   //if (estado3){
+  Serial.print(media,DEC);
+  Serial.print(" "); 
+ // Serial.print(auxiliar1,DEC);
+ // Serial.print(" "); 
+  Serial.print(variancia,DEC);
+  Serial.print(" "); 
+  Serial.println(velAngular,DEC);
+ // }  
   } 
    
 }
@@ -187,11 +198,15 @@ void medirVelocidad(unsigned char interrupcion)
 {
   cantOVerflow=0;//Reseteo el valor de cantidad de interrupciones ocurridas por timer 2
 unsigned long suma=0;
+long suma2=0;
   //Corro los valores de w en el buffer un lugar y voy sumando los valores para después calcular el promedio de velocidades:  
   for(int k=0;k<(2*cantMarcasEncoder-1);k++)
   {
     bufferVel[k]=bufferVel[k+1];//Desplazamiento a la derecha de los datos del buffer
     suma=suma+bufferVel[k];
+    // quitar esto $
+    velAngular2[k]=velAngular2[k+1];
+    suma2=suma2+velAngular2[k];
   }
   
   //Al terminar el bucle bufferVel tiene los últimos dos valores iguales (los dos de más a la izquierda). Esto cambia a continuación con la actualización del valor más a la derecha:
@@ -212,12 +227,21 @@ unsigned long suma=0;
   }                           
   suma=suma+bufferVel[(2*cantMarcasEncoder-1)];
   //velAngular=float(F_CPU)*float(2*cantMarcasEncoder)/suma;//Actualizo el valor de velocidad medida como el promedio de las últimas mediciones (todas las del buffer).
-  velAngular=float(F_CPU)/suma;//esto da en ciclos por segundo. Si se multiplica por 60 da en ciclos por minuto
+  velAngular=float(F_CPU*60)/(suma);//esto da en ciclos por segundo. Si se multiplica por 60 da en ciclos por minuto
   
-  //frecuencia= float(fclkio)/(2*velAngular)*60.0;  
-  frecuencia=suma/16;                 
+  //frecuencia= float(fclkio)/(2*velAngular)*60.0;                   
   //Obs: para el correcto funcionamiento de la rutina se requiere que no haya interrupción
   //por overflow en el timer 2 durante la ejecución de estas instrucciones
+  
+  // Calculo la variancia de las mediciones, para saber que medicion es mas exacta
+    //bufferVel[]={0,0,0,0,0,0,0,0,0,0,0,0};
+    velAngular2[15]=velAngular;
+  media=(suma2+velAngular)/16; auxiliar1=0;
+for (int q=0;q<16;q++){
+  auxiliar1= auxiliar1+ (float)((velAngular2[q]-media)*(velAngular2[q]-media));
+  
+  }
+variancia=(auxiliar1/float(16));
   
 }
 /*
