@@ -245,8 +245,12 @@ int Controlados::leerSensorDeLinea()
 
 	//Si hay más de
 }
+ void Controlados::configTimer2Contador(){
+  int a=2000,b=32;
+  Controlados::configTimer2Contador(a, b,0);
+  }
 
-void Controlados::configTimer2Contador(long Frecuencia)
+void Controlados::configTimer2Contador(const int& Frecuencia, const int& Prescaler, bool interrupciones=0)
 {
 	/* Frecuencia es un valor que va desde un desaconsejable 500000 hasta 1997 
   *  El error en esta frecuencia esta dado por el redondeo
@@ -285,7 +289,7 @@ void Controlados::configTimer2Contador(long Frecuencia)
 	Siendo fclkio=16.3MHz, tomando OCR2A=50 obtenemos Tint=0.1ms, 
 	aproximadamente.
   */
-	OCR2A=round(16300000/(32*Frecuencia));
+	OCR2A=round(F_CPU/long(Prescaler*Frecuencia));
 	/*Para habilitar las interrupciones por timer2 usamos el registro
 	TIMSK2. El único bit que nos interesa es el bit 1, OCIEA que activa
 	interrupciones por compare match con el registro OCR2A.
@@ -301,5 +305,43 @@ void Controlados::configTimer2Contador(long Frecuencia)
 	bits 2 a 0 son CS2[2:0] que seleccionan la fuente del clock. Para
 	poner el clock source interno con preescalador 32 ponemos 011.
   */
-	TCCR2B=0b00000011;
+  TCCR2B=0;
+  switch(Prescaler){
+    case 1:
+    TCCR2B++;
+    break;
+    case 8:
+    TCCR2B+=2;
+    break;
+    case 32:
+    TCCR2B+=3;
+    break;
+    case 64:
+    TCCR2B+=4;
+    break;
+    case 128:
+    TCCR2B+=5;
+    break;
+    case 256:
+    TCCR2B+=6;
+    break;
+    case 1024:
+    TCCR2B+=7;
+    break;
+    default:
+    break;   
+    }
+
+if (interrupciones){
+  //Interrupciones por estado en pin para lectura de los encoders:
+ 
+  bitWrite(PCICR,PCIE1,1); // Pin Change Interrupt Control Register ; Bit 1 – PCIE1: Pin Change Interrupt Enable 1; PCINT[14:8]
+  bitWrite(PCMSK1,PCINT8,1); // PCINT8 corresponde a A0.
+  bitWrite(PCIFR,PCIF1,1);// Limpio la bandera
+  }
+  
+	//TCCR2B=0b00000011;
 }
+
+
+
