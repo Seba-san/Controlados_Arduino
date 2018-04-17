@@ -47,19 +47,22 @@ int Bandera=0; // bandera para administrar procesos fuera de interrupciones
 float variancia=0;
 float media=0, auxiliar1=0;
  float velAngular2[16];
+float Datos_tx[]={-1,-2,-3,-4,-5,-6,-7};
 // #   #   #   # Declaracion de Funciones
 
 void medirVelocidad(unsigned char);
+void EnviarTX(int cantidad,char identificador, unsigned long *datos);
+void EnviarTX_online(unsigned long var);
 
 void setup() {
   interruptOFF; // se desactivan las interrupciones para configurar.
   Serial.begin(2000000);
-  controlados1.configPinesMotores();
-  controlados1.modoStop();
-  controlados1.configTimerMotores();
+  //controlados1.configPinesMotores();
+ // controlados1.modoStop();
+  //controlados1.configTimerMotores();
   controlados1.configTimer2Contador(FsEncoders,preescaler,1);//Configuro el timer2 como contador con interrupción. La frecuencia va desde 500000 hasta 1997.   
-  controlados1.actualizarDutyCycleMotores(70,30);
-  controlados1.modoAdelante();
+  //controlados1.actualizarDutyCycleMotores(70,30);
+ // controlados1.modoAdelante();
 
   interruptON;//Activo las interrupciones
   pinMode(A0, INPUT);
@@ -70,10 +73,15 @@ void setup() {
 
 void loop() {
   NOP;
+
 if (bitRead(Bandera,0)){ // timer 2 overflow
   //Serial.println  (Bandera,BIN);
   bitWrite(Bandera,0,0);
-  
+  if (trama_activa==3){
+    char p = 'p';
+    EnviarTX(16,p,bufferVel);
+    trama_activa=0;
+    }
   } 
   if (bitRead(Bandera,1)){ // Entra cuando no registra cambio en la entrada
   // Serial.println  (Bandera,BIN);
@@ -101,7 +109,7 @@ if (bitRead(Bandera,0)){ // timer 2 overflow
   Serial.print(velAngular,DEC);
   Serial.print(" ");
   Serial.print(frecuencia,DEC);
-  Serial.print(" "); */
+  Serial.print(" ");
   //Serial.print(F_CPU ,DEC);
    // Serial.print(" "); 
    //estado3=!estado3;
@@ -112,16 +120,17 @@ if (bitRead(Bandera,0)){ // timer 2 overflow
  // Serial.print(" "); 
   Serial.print(variancia,DEC);
   Serial.print(" "); 
-  Serial.println(velAngular,DEC);
+  Serial.println(velAngular,DEC); */
  // }  
   } 
    
 }
-/*
-void serialEvent() {
+
+void serialEvent() { // esta funcion se activa sola, es por interrupciones (ponele)
   int dato;
   if (Serial.available() > 0) {
     dato= Serial.read();
+    /*
     if (trama_activa==1)//La cadena ya esta identificada como actualización de velocidad
     {
       velDeseada=dato;//Guardo el nuevo valor de vel deseada
@@ -134,6 +143,26 @@ void serialEvent() {
         //if (nro_controlador==0){SetPWM(0);}//FALTA VER QUÉ HACER PARA PARAR EL MOTOR$$
         trama_activa=0;
     }
+*/
+    switch (dato){
+    case 0xFF:
+    trama_activa=1;
+    break;
+    case 0xFE:
+    trama_activa=2;
+    break;
+    case 253:
+    trama_activa=3;
+    break;
+    case 252:
+    trama_activa=4;
+    break;
+    default:
+    trama_activa=0;
+    break;
+
+    }
+    /*
     if (dato==0xFF)     //0xFF=Actualizar velocidad
     {
         trama_activa=1;
@@ -142,9 +171,10 @@ void serialEvent() {
     {
         trama_activa=2;
     }
+    */
   }
 }
-*/
+
 ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo del sist cte; Resetea con el valor de comparacion del A
   //COMPLETAR$
   cantOVerflow++;
@@ -227,7 +257,7 @@ long suma2=0;
   }                           
   suma=suma+bufferVel[(2*cantMarcasEncoder-1)];
   //velAngular=float(F_CPU)*float(2*cantMarcasEncoder)/suma;//Actualizo el valor de velocidad medida como el promedio de las últimas mediciones (todas las del buffer).
-  velAngular=float(F_CPU*60)/(suma);//esto da en ciclos por segundo. Si se multiplica por 60 da en ciclos por minuto
+  velAngular=float(F_CPU*8)/(suma);//esto da en ciclos por segundo. Si se multiplica por 60 da en ciclos por minuto
   
   //frecuencia= float(fclkio)/(2*velAngular)*60.0;                   
   //Obs: para el correcto funcionamiento de la rutina se requiere que no haya interrupción
@@ -235,6 +265,7 @@ long suma2=0;
   
   // Calculo la variancia de las mediciones, para saber que medicion es mas exacta
     //bufferVel[]={0,0,0,0,0,0,0,0,0,0,0,0};
+    /*
     velAngular2[15]=velAngular;
   media=(suma2+velAngular)/16; auxiliar1=0;
 for (int q=0;q<16;q++){
@@ -242,7 +273,8 @@ for (int q=0;q<16;q++){
   
   }
 variancia=(auxiliar1/float(16));
-  
+*/
+  EnviarTX_online(bufferVel[15]);
 }
 /*
 void tic(){
@@ -253,4 +285,30 @@ void toc(){
   tocc=micros()-ticc;
 }
 */
+
+// Ver como mejorar sustancialmente esta funcion. Esta media fea.
+void EnviarTX(int cantidad,char identificador, unsigned long *datos){
+  
+ // [inicio][cantidad de datos][identificador][Datos][fin]
+ 
+  Serial.println(0xFF,DEC);
+  Serial.println(cantidad,DEC);
+  Serial.println(identificador);
+  float a;
+for (int i=0;i<cantidad;i++){
+  a=*(datos+i);
+   Serial.println(a,DEC);
+  }
+  
+  Serial.println(0xFE,DEC);
+   
+  }
+
+void EnviarTX_online(unsigned long var){
+  //datos_enviados++;
+  //if (datos_enviados>16)
+  if (trama_activa==4){
+  Serial.println(var,DEC);
+  }
+  }
 

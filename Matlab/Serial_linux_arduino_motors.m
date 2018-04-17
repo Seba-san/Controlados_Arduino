@@ -1,30 +1,75 @@
 %% Configuracion inicial
 cd /home/seba/Dropbox/Facultad/Trabajo_final_Controlados/Codigos/Codigos_Arduino/Matlab
-cd('C:\Users\Tania\Dropbox\Trabajo final - Controlados\Codigos\Codigos\Matlab')%compu Tania
+%cd('C:\Users\Tania\Dropbox\Trabajo final - Controlados\Codigos\Codigos\Matlab')%compu Tania
 
-
+addpath('/home/seba/Dropbox/Facultad/Trabajo_final_Controlados/Codigos/Matlab');
 %% Inicio
 % uart = serial('COM2','BaudRate',1200,'DataBits',7);
 %s = serial('COM5');
-clear all;clc
-s=serial('/dev/ttyUSB0','BaudRate',2000000,'DataBits',8);
-set(s,'Terminator','CR');
-m=10;%5
-s.InputBufferSize = 36*m;% antes eran 101 (para el prbs)%Cuantos bytes almaceno durante una operacion de read; Seba: Si no hay dato, el sistema cuelga por timeout.
-fopen(s)
+% Hay que agregar el path!!
+s=InicializacionSerial('/dev/ttyUSB0',2000000);
+
 disp('Puerto Abierto')
 %% Fin
 fclose(s)
 %clear all;clc
 disp('Puerto Cerrado')
 %% Tx y Rx
-%Tania: no me estaba respondiendo a cambios del sistema. Por eso prob� con
-%limpiar el buffer antes de transmitir y recibir, pero despu�s se arregl� y
-%se mantuvo as� aunque le coment� el comando. Por ah� era cuesti�n de la
-%placa, pero si vuelve el problema acordate de esto.
-% Seba: Recordar configurar el "m". m determina cuantas muestras se toman
-% entre cambios dela PBRS
-flushinput(s);%Si hab�a algo en el buffer de entrada,lo limpio.
+medicion=zeros(1,16);
+
+for i=0:16
+%inicial=tic;
+EscribirSerial(s,253);
+Dato=DatoRx(s);
+Dato.datos'
+%toc(inicial);
+end
+%%
+try
+close 1
+end
+
+figure(1)
+EscribirSerial(s,252);
+cantidad=1000;
+medicion=zeros(2,cantidad);
+for i=0:cantidad-1
+inicial=tic;
+medicion(1,i+1)=str2double(fscanf(s));
+medicion(2,i+1)=toc(inicial);
+end
+EscribirSerial(s,255);
+%
+medicion2=zeros(1,cantidad/2);
+i=1;i2=1;
+while i<cantidad
+medicion2(i2)=medicion(1,i)+medicion(1,i+1);
+i=i+2;
+i2=i2+1;
+end
+
+medicion3=zeros(1,cantidad);
+i=1;
+while i<cantidad-16
+    for q=0:15
+medicion3(i)=medicion3(i)+medicion(1,i+q);
+    end
+i=i+1;
+end
+%mean(medicion2)
+freq=16e6./medicion3(1:cantidad-17);
+plot(freq)
+disp('rpm')
+media=mean(freq);
+media*60
+desvio=std(freq)
+%proporcion
+disp("porcenjate del desvio")
+(desvio/media)*100
+%std(medicion2)
+
+%%
+%EscribirSerial(s,1)
 fprintf(s,1);%Comando para iniciar la prueba
 %pause(10);
 clear dato tiempo secuencia2;
