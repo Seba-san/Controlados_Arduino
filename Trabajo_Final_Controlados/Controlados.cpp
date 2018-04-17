@@ -289,7 +289,7 @@ void Controlados::configTimer2Contador(const int& Frecuencia, const int& Prescal
 	Siendo fclkio=16.3MHz, tomando OCR2A=50 obtenemos Tint=0.1ms, 
 	aproximadamente.
   */
-	OCR2A=round(F_CPU/long(Prescaler*Frecuencia));
+	OCR2A=round(float(F_CPU)/(float(Prescaler)*float(Frecuencia)));
 	/*Para habilitar las interrupciones por timer2 usamos el registro
 	TIMSK2. El único bit que nos interesa es el bit 1, OCIEA que activa
 	interrupciones por compare match con el registro OCR2A.
