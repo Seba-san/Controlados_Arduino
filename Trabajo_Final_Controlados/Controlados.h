@@ -22,7 +22,7 @@ class Controlados
 	//Configuración del timer1 para los motores:
 	void configPinesMotores();
 	void configTimerMotores();
-    void actualizarDutyCycleMotores(int dutyCycleA,int dutyCycleB);  
+  void actualizarDutyCycleMotores(int dutyCycleA,int dutyCycleB);  
 	void modoAdelante();
 	void modoAtras();
 	void modoStop();
@@ -32,7 +32,7 @@ class Controlados
 	
 	//Configuración timer2 como contador:
 	void configTimer2Contador(const int& Frecuencia, const int& Prescaler,bool interrupciones);
- void configTimer2Contador();
+  void configTimer2Contador();
 	
   private: //Funciones y variables internas
 	int _timerMotores;//Para indicar cuál timer fue configurado para los motores.
