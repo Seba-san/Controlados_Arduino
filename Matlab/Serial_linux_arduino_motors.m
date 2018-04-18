@@ -7,7 +7,8 @@ addpath('/home/seba/Dropbox/Facultad/Trabajo_final_Controlados/Codigos/Matlab');
 % uart = serial('COM2','BaudRate',1200,'DataBits',7);
 %s = serial('COM5');
 % Hay que agregar el path!!
-s=InicializacionSerial('/dev/ttyUSB0',115200);
+s=InicializacionSerial('/dev/ttyUSB0',115200);%2000000);
+
 
 %% Fin
 fclose(s)
@@ -41,6 +42,7 @@ EscribirSerial(s,255);
 %
 medicion2=zeros(1,cantidad/2);
 i=1;i2=1;
+% Sumo 2 mediciones consecutivas
 while i<cantidad
 medicion2(i2)=medicion(1,i)+medicion(1,i+1);
 i=i+2;
@@ -48,26 +50,73 @@ i2=i2+1;
 end
 
 medicion3=zeros(1,cantidad);
-i=1;
-while i<cantidad-16
+i=16;
+%Esto solo es para el motor, sumo los 16 tiempos consecutivos
+while i<cantidad
     for q=0:15
-medicion3(i)=medicion3(i)+medicion(1,i+q);
+medicion3(i)=medicion3(i)+medicion(1,i-q);
     end
 i=i+1;
 end
 %mean(medicion2)
-freq=16e6./medicion2;
-%freq=16e6./medicion3(1:cantidad-17);
+freq=16e6./medicion3(16:cantidad-1);
+%freq=16e6./medicion2;
+%freq=16e6./medicion(1,:);
 plot(freq)
 disp('rpm')
 media=mean(freq)
-
+%media*60
 desvio=std(freq)
 %proporcion
 disp("porcenjate del desvio")
 (desvio/media)*100
 %std(medicion2)
 
+%%
+fclose(s)
+%%
+s=InicializacionSerial('/dev/ttyUSB0',115200);%2000000);
+%%
+clc
+
+EscribirSerial(s,253);
+bandera=1;
+a=0;
+while a==0
+Dato=DatoRx(s);
+%EscribirSerial(s,255);
+
+TCNT2anterior=Dato.datos(1);
+TCNT2actual=Dato.datos(2);
+cantOVerflow_actual=Dato.datos(3);
+bufferVel_ardu=Dato.datos(4) ;  
+bufferVel=32*(TCNT2actual+cantOVerflow_actual*250-TCNT2anterior);
+a=bufferVel_ardu-bufferVel;
+
+% falla=[0 0 0 0];
+% tmh=Dato.datos(1);
+% t=Dato.datos(2);
+% cantOVerflow_actual=Dato.datos(3);
+% if(t~=cantOVerflow_actual*250);bandera=0;falla(1)=1;end
+% bufferVel_ardu=Dato.datos(4);  
+% a=32*tmh;
+% if(a~=bufferVel_ardu);bandera=0;falla(2)=1;end
+% h=tmh-t;
+% b=32*(t+h);
+% if(b~=bufferVel_ardu);bandera=0;falla(3)=1;end
+end
+falla
+EscribirSerial(s,255);
+a
+%bufferVel
+Dato
+
+%  t=cantOVerflow_actual*_OCR2A;
+%      h=TCNT2actual-TCNT2anterior;
+% aux[2]=cantOVerflow_actual;   
+%   aux[3]=bufferVel; 
+%   aux[0]= t+h;
+%   aux[1]= t;   
 %%
 %EscribirSerial(s,1)
 fprintf(s,1);%Comando para iniciar la prueba
