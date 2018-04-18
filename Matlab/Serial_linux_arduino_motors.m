@@ -59,8 +59,8 @@ medicion3(i)=medicion3(i)+medicion(1,i-q);
 i=i+1;
 end
 %mean(medicion2)
-freq=16e6./medicion3(16:cantidad-1);
-%freq=16e6./medicion2;
+%freq=16e6./medicion3(16:cantidad-1);
+freq=16e6./medicion2;
 %freq=16e6./medicion(1,:);
 plot(freq)
 disp('rpm')
