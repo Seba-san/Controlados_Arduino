@@ -13,6 +13,7 @@ Controlados controlados1;
 const int cantMarcasEncoder = 8; //Es la cantidad de huecos que tiene el encoder de cada motor.
 const int FsEncoders = 2000;
 const int preescaler = 32;
+
 const int cota = 382;//cota=32 hace que de 0 a aprox 100rpm asuma que la velocidad es cero.
 
 
@@ -56,7 +57,7 @@ void EnviarTX_online(unsigned long var);
 
 void setup() {
   interruptOFF; // se desactivan las interrupciones para configurar.
-  Serial.begin(2000000);
+Serial.begin(115200); // Si se comunica a mucha velocidad se producen errores (que no se detectan hasta que haces las cuentas)
   //controlados1.configPinesMotores();
  // controlados1.modoStop();
   //controlados1.configTimerMotores();
@@ -221,12 +222,13 @@ ISR(PCINT1_vect){
   TCNT2anterior=TCNT2actual;//Ahora el valor actual pasa a ser el anterior de la próxima interrupción.                           
   TCNT2actual=TCNT2;//Almaceno enseguida el valor del timer para que no cambie mientras hago las cuentas.                   
   cantOVerflow_actual=cantOVerflow; 
+  cantOVerflow=0;
   bitWrite(Bandera,2,1);   //medirVelocidad(1); 
 }
 
 void medirVelocidad(unsigned char interrupcion)
 {
-  cantOVerflow=0;//Reseteo el valor de cantidad de interrupciones ocurridas por timer 2
+  
 unsigned long suma=0;
 long suma2=0;
   //Corro los valores de w en el buffer un lugar y voy sumando los valores para después calcular el promedio de velocidades:  
@@ -241,7 +243,12 @@ long suma2=0;
   
   //Al terminar el bucle bufferVel tiene los últimos dos valores iguales (los dos de más a la izquierda). Esto cambia a continuación con la actualización del valor más a la derecha:
   if(interrupcion){
-    bufferVel[2*cantMarcasEncoder-1]=(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
+    long t,tmh; // Lo hago por partes porque todo junto generaba errores en algunas ocaciones
+     t=cantOVerflow_actual*OCR2A;
+     tmh=TCNT2actual-TCNT2anterior+t;
+    bufferVel[2*cantMarcasEncoder-1]=long(preescaler)*(tmh);
+    
+    //bufferVel[2*cantMarcasEncoder-1]=(long(preescaler)*(TCNT2actual+cantOVerflow_actual*long(OCR2A)-TCNT2anterior));
      //bufferVel[2*cantMarcasEncoder-1]=float(fclkio)/(float(preescaler)*(TCNT2actual+cantOVerflow_actual*float(OCR2A)-TCNT2anterior));
    // bufferVel[2*cantMarcasEncoder-1]=preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior)*fclkio2;// Es para contar ciclos
     //bufferVel[2*cantMarcasEncoder-1]=fclkio/(2*cantMarcasEncoder*preescaler*(TCNT2actual+cantOVerflow*OCR2A-TCNT2anterior));
@@ -290,7 +297,7 @@ void toc(){
 void EnviarTX(int cantidad,char identificador, unsigned long *datos){
   
  // [inicio][cantidad de datos][identificador][Datos][fin]
- 
+ if (trama_activa==3){
   Serial.println(0xFF,DEC);
   Serial.println(cantidad,DEC);
   Serial.println(identificador);
@@ -303,7 +310,7 @@ for (int i=0;i<cantidad;i++){
   Serial.println(0xFE,DEC);
    
   }
-
+}
 void EnviarTX_online(unsigned long var){
   //datos_enviados++;
   //if (datos_enviados>16)

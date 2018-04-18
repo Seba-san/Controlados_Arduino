@@ -7,9 +7,8 @@ addpath('/home/seba/Dropbox/Facultad/Trabajo_final_Controlados/Codigos/Matlab');
 % uart = serial('COM2','BaudRate',1200,'DataBits',7);
 %s = serial('COM5');
 % Hay que agregar el path!!
-s=InicializacionSerial('/dev/ttyUSB0',2000000);
+s=InicializacionSerial('/dev/ttyUSB0',115200);
 
-disp('Puerto Abierto')
 %% Fin
 fclose(s)
 %clear all;clc
@@ -57,11 +56,12 @@ medicion3(i)=medicion3(i)+medicion(1,i+q);
 i=i+1;
 end
 %mean(medicion2)
-freq=16e6./medicion3(1:cantidad-17);
+freq=16e6./medicion2;
+%freq=16e6./medicion3(1:cantidad-17);
 plot(freq)
 disp('rpm')
-media=mean(freq);
-media*60
+media=mean(freq)
+
 desvio=std(freq)
 %proporcion
 disp("porcenjate del desvio")
