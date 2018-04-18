@@ -31,7 +31,7 @@ end
 
 figure(1)
 EscribirSerial(s,252);
-cantidad=1000;
+cantidad=4;
 medicion=zeros(2,cantidad);
 for i=0:cantidad-1
 inicial=tic;
@@ -59,8 +59,8 @@ medicion3(i)=medicion3(i)+medicion(1,i-q);
 i=i+1;
 end
 %mean(medicion2)
-freq=16e6./medicion3(16:cantidad-1);
-%freq=16e6./medicion2;
+%freq=16e6./medicion3(16:cantidad-1);
+freq=16e6./medicion2;
 %freq=16e6./medicion(1,:);
 plot(freq)
 disp('rpm')
@@ -75,7 +75,7 @@ disp("porcenjate del desvio")
 %%
 fclose(s)
 %%
-s=InicializacionSerial('/dev/ttyUSB1',115200);%2000000);
+s=InicializacionSerial('/dev/ttyUSB0',115200);%2000000);
 %%
 clc
 
