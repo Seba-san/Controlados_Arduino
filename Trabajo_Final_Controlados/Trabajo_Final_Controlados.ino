@@ -33,7 +33,10 @@ unsigned long cuenta;
 //################
 
 // #   #   #   # Variables
-unsigned char trama_activa=0;//Lo pongo en unsigned char para que ocupe 1 byte (int ocupa 2)                           
+unsigned char trama_activa=0;//Lo pongo en unsigned char para que ocupe 1 byte (int ocupa 2)
+bool online;//Me indica si poner o no el identificador para la transmisión (online=true no lo transmite para ahorrar tiempo)
+bool tx_activada;//Me indica si transmitir o no.
+int PWMA;int PWMB;//Acá guardo los valores de nuevos de PWM que me mada Matlab para que actualice. La actualización efectiva se hace cuando tengo estos dos valores.
 int cantOVerflow=0;//Variable que almacena la cantidad de veces que se desbordó el timer2 hasta que vuelvo a tener interrupción por pin de entrada. Esto permite realizar la medición de 
                   //tiempos entre aujeros del encoder.                                                                              
 /*
@@ -101,23 +104,33 @@ void serialEvent() { // esta funcion se activa sola, es por interrupciones (pone
   int dato;
   if (Serial.available() > 0) {
     dato= Serial.read();
-    switch (dato){
-    case 0xFF:
-    trama_activa=1;
-    break;
-    case 0xFE:
-    trama_activa=2;
-    break;
-    case 253:
-    trama_activa=3;
-    break;
-    case 252:
-    trama_activa=4;
-    break;
-    default:
-    trama_activa=0;
-    break;
-
+    if(trama_activa==0){
+      switch (dato){
+        case 253://Instrucción 253: transmitir con identificador de trama.
+          online=false;
+          tx_activada=true;
+          break;
+        case 252://Instrucción 252: transmitir sin identificador de trama.
+          online=true;
+          tx_activada=true;
+          break;
+        case 251://Instrucción 251: cortar transmición
+          tx_activada=false;
+          break;
+        case 250://Instrucción 250: cambiar PWM de los motores
+          trama_activa=1;
+          break;
+        default://No hace nada si no recibe una instrucción válida
+          break;}
+    }
+    else if (trama_activa==1){//Si trama_activa=1 es porque estaba esperando a recibir el nuevo valor de PWM del motor A
+      PWMA=dato;
+      trama_activa=2;//Le indico al nano que el próximo byte que reciba es el valor del PWM del motor B.
+    }
+    else if (trama_activa==2){//Si trama_activa=2 es porque estaba esperando a recibir el nuevo valor de PWM del motor B
+      PWMB=dato;
+      trama_activa=0;//Le indico al nano que terminé, por lo que el próximo byte que reciba debería ser una nueva instrucción.
+      controlados1.actualizarDutyCycleMotores(PWMA,PWMB);//Realizo la actualización simultánea de la velocidad de ambos motores.
     }
   }
 }
@@ -222,7 +235,7 @@ void EnviarTX(int cantidad,const char identificador, unsigned long *datos){ // o
   
  // [inicio][cantidad de datos][identificador][Datos][fin] Agregar un CRC y ACK???
 
- if (trama_activa==3){ 
+ if (online==false && tx_activada==true){ 
 
   Serial.println(0xFF,DEC); // inicio
   Serial.println(cantidad,DEC);// cantidad de datos
@@ -239,7 +252,7 @@ for (int i=0;i<cantidad;i++){
   }
 
 void EnviarTX_online(unsigned long var){ // funcion de envio de datos de corta duracion. No se envia en formato trama, solo verifica una bandera.
-  if (trama_activa==4){
+  if (online==true && tx_activada==true){
   Serial.println(var,DEC);
   }
   }
