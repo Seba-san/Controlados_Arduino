@@ -331,6 +331,7 @@ void Controlados::configTimer2Contador(const int& Frecuencia, const int& Prescal
     TCCR2B+=7;
     break;
     default:
+    TCCR2B+=3;
     break;   
     }
 

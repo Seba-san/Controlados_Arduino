@@ -52,7 +52,7 @@ end
 % Esto esta bajo prueba
 
 Dato.cantidad=cantidad;
-Dato.identificador=identificador;
+Dato.identificador=identificador; % Tiene un error: aparece un enter antes del char
 Dato.datos=datos;
 
  

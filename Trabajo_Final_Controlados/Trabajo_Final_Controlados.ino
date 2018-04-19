@@ -11,15 +11,17 @@ Controlados controlados1;
 #define interruptOFF bitClear(SREG,7)//desactiva las interrupciones globales
 // #   #   #   # Constantes 
 const int cantMarcasEncoder = 8; //Es la cantidad de huecos que tiene el encoder de cada motor.
-const int FsEncoders = 2000;
-const int preescaler = 32;
+const int FsEncoders = 2000;//8000 2000
+const int preescaler = 32;//8 32 64 
 const int cota = 400;//cota=32 hace que de 0 a aprox 100rpm asuma que la velocidad es cero.
 const unsigned long _OCR2A = 250;
 
 // ############# Probandos cosas locas
 #define NOP __asm__ __volatile__ ("nop\n\t")
 #define SalidaTest 3
-bool estado=0,estado2=0,estado3=0;
+#define SalidaTest2 4
+#define SalidaTest3 5
+bool estado=0,estado2=0,estado3=0, estado4=0;
  //unsigned long suma=0;//float suma=0;
  
 //################
@@ -43,12 +45,15 @@ float velDeseada=0;//Empieza detenido el motor.
 
 // #   #   #   # Variable Basura
 
-int Bandera=0; // bandera para administrar procesos fuera de interrupciones  
+int Bandera=0; // bandera para administrar procesos fuera de interrupciones 
+float b, freq; 
+unsigned long cuenta;    
 // #   #   #   # Declaracion de Funciones
 
 void medirVelocidad(unsigned char);
 void EnviarTX(int cantidad,char identificador, unsigned long *datos);
 void EnviarTX_online(unsigned long var);
+void timer_interrupt(void);
 
 void setup() {
   interruptOFF; // se desactivan las interrupciones para configurar.
@@ -66,6 +71,8 @@ Serial.begin(115200); // Si se comunica a mucha velocidad se producen errores (q
   pinMode(A0, INPUT);
   // $Prueba
   pinMode(SalidaTest, OUTPUT);
+  pinMode(SalidaTest2, OUTPUT);
+  pinMode(SalidaTest3, OUTPUT);
    //configTimer2Contador(); // la agrego a mano.
 }
 
@@ -114,6 +121,13 @@ void serialEvent() { // esta funcion se activa sola, es por interrupciones (pone
 }
 
 ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo del sist cte; Resetea con el valor de comparacion del A
+
+timer_interrupt();
+
+}
+void timer_interrupt(){
+  //estado2=!estado2;
+  //digitalWrite(SalidaTest,estado2);
   cantOVerflow++;
   if(cantOVerflow>cota){
    bitWrite(Bandera,1,1); //medirVelocidad(0);//Llamo a la rutina de medición de vel indicándole que pasó demasiado tiempo y que tiene que asumir que la velocidad es 0.                                        
@@ -121,25 +135,36 @@ ISR (TIMER2_COMPA_vect){//Interrupción por Timer2 para definir frec de muestreo
   bitWrite(Bandera,0,1);
   //estado=!estado;
   //if (estado){
-    estado2=!estado2;
-  digitalWrite(SalidaTest,estado2);
+   // estado2=!estado2;
+  //digitalWrite(SalidaTest,estado2);
   //}
-  
+  //digitalWrite(SalidaTest,0);
 }
 ISR(PCINT1_vect){
  /*
   * Hay que verificar donde fue el cambio de estado, porque al tener 2 ruedas, no se sabe de donde provino (habria que hacer una comparacion manual)
   */
-  TCNT2anterior=TCNT2actual;//Ahora el valor actual pasa a ser el anterior de la próxima interrupción.                           
+ // estado3=!estado3;
+ // if (estado3){
+ //digitalWrite(SalidaTest2,estado3);
+  TCNT2anterior=TCNT2actual;//Ahora el valor actual pasa a ser el anterior de la próxima interrupción.   
+  if (bitRead(TIFR2,1)){ // me fijo si hay overflow
+  timer_interrupt();
+  bitSet(TIFR2,1); // borro bandera para que no entre de nuevo
+  }                        
   TCNT2actual=TCNT2;//Almaceno enseguida el valor del timer para que no cambie mientras hago las cuentas.                   
   cantOVerflow_actual=cantOVerflow; 
   cantOVerflow=0;
   bitWrite(Bandera,2,1);   //medirVelocidad(1); 
- 
+  //estado=!estado;
+   //digitalWrite(SalidaTest2,0);
+  //}
+  
 }
 
 void medirVelocidad(unsigned char interrupcion)
 {
+
 
   
 unsigned long suma=0;
@@ -153,9 +178,9 @@ unsigned long suma=0;
   
   //Al terminar el bucle bufferVel tiene los últimos dos valores iguales (los dos de más a la izquierda). Esto cambia a continuación con la actualización del valor más a la derecha:
   if(interrupcion){
-   
-     t=cantOVerflow_actual*_OCR2A;
-     tmh=TCNT2actual-TCNT2anterior+t;
+ 
+     t=cantOVerflow_actual*OCR2A;
+     tmh=TCNT2actual-TCNT2anterior+t; // Ver problemas de variables
     bufferVel[2*cantMarcasEncoder-1]=long(preescaler)*(tmh);
     
     //bufferVel[2*cantMarcasEncoder-1]=(long(preescaler)*(TCNT2actual+cantOVerflow_actual*long(OCR2A)-TCNT2anterior));
@@ -169,20 +194,30 @@ unsigned long suma=0;
   else{
      bufferVel[2*cantMarcasEncoder-1]=0;
   }   
+
+  freq=float(F_CPU)/(bufferVel[15]+bufferVel[14]);
+  b=100-freq;
+  if (abs(b)>1){
+    //estado4=!estado4;
+     // digitalWrite(SalidaTest3,estado4);
   aux[0]=TCNT2anterior;
   aux[1]=TCNT2actual;
   aux[2]=cantOVerflow_actual;   
-  aux[3]= bufferVel[2*cantMarcasEncoder-1]; 
-  aux[4]= tmh;
-  aux[5]= t;                     
-EnviarTX(6,'a',aux);
+  aux[0]= bufferVel[15]+bufferVel[14]; 
+    aux[1]= cuenta; 
+    cuenta=0;                 
+EnviarTX(2,'a',aux);
+  }
+  else{cuenta++;}
 EnviarTX_online( bufferVel[2*cantMarcasEncoder-1]);
+
+
 }
 
 // Ver como mejorar sustancialmente esta funcion. Esta media fea.
 void EnviarTX(int cantidad,const char identificador, unsigned long *datos){
   
- // [inicio][cantidad de datos][identificador][Datos][fin]
+ // [inicio][cantidad de datos][identificador][Datos][fin] Agregar un CRC???
 
  if (trama_activa==3){ 
 
