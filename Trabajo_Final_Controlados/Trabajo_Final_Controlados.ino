@@ -1,5 +1,4 @@
-//Tania estuvo aquí y seba tambien
-//probando cosas
+
 #include <avr/interrupt.h> //Esto lo pongo porque decía el manual de avr que
 #include <avr/io.h>        //supuestamente lo necesito para las interrupciones
 
@@ -63,12 +62,12 @@ void setup() {
 
 Serial.begin(115200); // Si se comunica a mucha velocidad se producen errores (que no se detectan hasta que haces las cuentas)
 
-  //controlados1.configPinesMotores();
- // controlados1.modoStop();
-  //controlados1.configTimerMotores();
-  controlados1.configTimer2Contador(FsEncoders,preescaler,1);//Configuro el timer2 como contador con interrupción. La frecuencia va desde 500000 hasta 1997.   
-  //controlados1.actualizarDutyCycleMotores(70,30);
- // controlados1.modoAdelante();
+ controlados1.configPinesMotores();
+ controlados1.modoStop();
+ controlados1.configTimerMotores();
+ controlados1.configTimer2Contador(FsEncoders,preescaler,1);//Configuro el timer2 como contador con interrupción. La frecuencia va desde 500000 hasta 1997.   
+ controlados1.actualizarDutyCycleMotores(70,30);
+ controlados1.modoAdelante();
 
   interruptON;//Activo las interrupciones
   pinMode(A0, INPUT);
@@ -81,7 +80,8 @@ Serial.begin(115200); // Si se comunica a mucha velocidad se producen errores (q
 
 void loop() {
   NOP;
-
+controlados1.actualizarDutyCycleMotores(0,0);
+controlados1.modoAdelante();
 if (bitRead(Bandera,0)){ // timer 2 overflow
   } 
   if (bitRead(Bandera,1)){ // Entra cuando no registra cambio en la entrada
