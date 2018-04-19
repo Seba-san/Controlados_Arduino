@@ -24,7 +24,11 @@ Dato=DatoRx(s);
 Dato.datos'
 %toc(inicial);
 end
-%%
+%% 
+% Este codigo realiza una "cantidad" de mediciones de tiempo de forma
+% online y luego las muestra en un plot. Aqui se practican distintas formas
+% de obtener los datos y con ellas, se calcula la media y la variancia,
+% para obtener una medida de la "confianza" en las mediciones.
 try
 close 1
 end
@@ -77,19 +81,26 @@ fclose(s)
 %%
 s=InicializacionSerial('/dev/ttyUSB0',115200);%2000000);
 %%
+% Este codigo, es funcional a la vercion: commit b162d5d7e01e02d2daadd90df3ba0800cd0464f5
+% El microcontrolador, hace el calculo de la frecuencia medida (idealmente
+% 100hz) y si le da un error mayor a 1hz, lo envia en el formato "trama" (253), 
+% para realizar un analisis mas exaustivo de la problematica. Actualmente
+% esto esta mayoritariamente corregido.
+%
 clc
 EscribirSerial(s,253);
 buffer2=zeros(2,1);
 a=0;
-papu=tic;
+papu=tic;  % Este while se controla por tiempo, toma 10 segundos de medicion.
 while a==0
 A=DatoRx(s);
 %buffer2(1)=A.datos(4)
 % %B=DatoRx(s);
 % buffer2(2)=DatoRx_online(s);%B.datos(4); 
  %freq=16e6./A.datos(4)
+ % [(distancia al valor ideal)  (distancia en cuentas del timer 2) (cantidad de datos sin errores)
  m=[(A.datos(1)-16e4)  (A.datos(1)-16e4)/32 A.datos(2)]
- 16e6/A.datos(1)
+ 16e6/A.datos(1) % frecuencia medida.
  
 % b=100-freq;
 % if (abs(b)>1); a=1;b 
@@ -97,15 +108,19 @@ A=DatoRx(s);
 if (toc(papu)>10);a=1;end
 end
  EscribirSerial(s,255);
-% mm=[74 218 9 158400];
-% bufferVel=32*(mm(2)+mm(3)*250-mm(1));
-% 
-% m=[(bufferVel-16e4)  (bufferVel-16e4)/32]
+
 
 
 
 
 %%
+% Este codigo sirvio en su momento para chequear que la informacion
+% recibida esta libre de errores, gracias a esto se detecto que a
+% velocidades de 2M, se producen errores de comunicacion. Esto se puede
+% arreglar con un CRC y un ACK, pero es demaciado a mi entender. Por lo que
+% la solucion es bajar la velocidad.
+
+% Este codigo es funcional a alguna vercion anterior de: commit b162d5d7e01e02d2daadd90df3ba0800cd0464f5
 clc
 
 EscribirSerial(s,253);
