@@ -7,20 +7,48 @@ addpath('/home/seba/Dropbox/Facultad/Trabajo_final_Controlados/Codigos/Matlab');
 % uart = serial('COM2','BaudRate',1200,'DataBits',7);
 %s = serial('COM5');
 % Hay que agregar el path!!
-s=InicializacionSerial('/dev/ttyUSB0',115200);%2000000);
+InfoHard=instrhwinfo('serial');%Busco cu�l puerto tengo conectado con esta instrucci�n
+%En InfoHard.SerialPorts me guarda celdas con los puertos disponibles. Uso
+%la primer celda y chau.
+s=InicializacionSerial(InfoHard.SerialPorts{1},115200);%Velocidad: 115200 baudios
+
 
 %% Fin
 fclose(s)
 %clear all;clc
 disp('Puerto Cerrado')
 %%
-% 
-dato(1)=0;
-dato(2)=0;
-Env_instruccion(s,'PWM',dato);
-
-
-
+% Respuesta al escalon
+% Le digo al micro que ponga el PWM en un dado valor y que mida la
+% velocidad obtenida. Hago esto para varios valores para obtener una curva
+% de respuesta.
+% Para eso uso Env_instruccion, envi�ndole: Env_instruccion(s,'PWM',[PWMA,
+% PWMB]), donde PWMA y PWMB son los PWM de cada motor.
+cantidad=2000;
+Env_instruccion(s,'online');%Le indico al nano que se ponga a escupir datos sin identificador de trama
+Env_instruccion(s,'PWM',[20 20]);  
+pause(1);
+medicion=zeros(1,2*cantidad);
+for i=0:cantidad-1
+medicion(i+1)=str2double(fscanf(s));
+end
+Env_instruccion(s,'PWM',[100 100]);  
+for i=cantidad:(2*cantidad)-1
+medicion(i+1)=str2double(fscanf(s));
+end
+medicion3=zeros(1,2*cantidad);
+i=16;
+%Esto solo es para el motor, sumo los 16 tiempos consecutivos
+while i<2*cantidad
+    for q=0:15
+medicion3(i)=medicion3(i)+medicion(i-q);
+    end
+i=i+1;
+end
+Env_instruccion(s,'PWM',[0 0]);  
+Env_instruccion(s,'stop');
+%freq=16e6./medicion3(16:2*cantidad-1); 
+plot(medicion3(200:2*cantidad))
 
 %% Barrido de pwm
 
@@ -32,7 +60,7 @@ i
 dato(1)=i;
 dato(2)=i;
 Env_instruccion(s,'PWM',dato);
-salida=str2num(fscanf(s))
+
 end
 
 for i=100:-1:0
@@ -42,9 +70,8 @@ i
 dato(1)=i;
 dato(2)=i;
 Env_instruccion(s,'PWM',dato);
-salida=str2num(fscanf(s));
-end
 
+end
 
 
 

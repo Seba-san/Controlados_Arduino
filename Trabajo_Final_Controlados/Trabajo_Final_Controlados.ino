@@ -133,7 +133,7 @@ void serialEvent() { // esta funcion se activa sola, es por interrupciones (pone
         case ins_PWM://Instrucción 250: cambiar PWM de los motores
           trama_activa=1;
           break;
-        case ins_test://Instrucción 249: iniciar $quitar si no se usa
+        case ins_test://Instrucción 249: codigo para exigir una resputa preestablecida. Sirve para saber si hay conexion.
           Serial.println(170,DEC);
         default://No hace nada si no recibe una instrucción válida
           break;}      
