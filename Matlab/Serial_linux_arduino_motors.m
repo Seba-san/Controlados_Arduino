@@ -9,16 +9,15 @@ addpath('/home/seba/Dropbox/Facultad/Trabajo_final_Controlados/Codigos/Matlab');
 % Hay que agregar el path!!
 s=InicializacionSerial('/dev/ttyUSB0',115200);%2000000);
 
-
 %% Fin
 fclose(s)
 %clear all;clc
 disp('Puerto Cerrado')
 %%
-dato(1)=10;
-dato(2)=50;
+% 
+dato(1)=0;
+dato(2)=0;
 Env_instruccion(s,'PWM',dato);
-
 
 
 
@@ -30,19 +29,19 @@ for i=0:100
     lala=tic;
 while toc(lala)<1 end
 i
-EscribirSerial(s,250);
-EscribirSerial(s,i);
-EscribirSerial(s,0);
-salida=str2num(fscanf(s));
+dato(1)=i;
+dato(2)=i;
+Env_instruccion(s,'PWM',dato);
+salida=str2num(fscanf(s))
 end
 
 for i=100:-1:0
     lala=tic;
 while toc(lala)<1 end
 i
-EscribirSerial(s,250);
-EscribirSerial(s,i);
-EscribirSerial(s,0);
+dato(1)=i;
+dato(2)=i;
+Env_instruccion(s,'PWM',dato);
 salida=str2num(fscanf(s));
 end
 
@@ -70,14 +69,15 @@ end
 
 figure(1)
 EscribirSerial(s,252);
-cantidad=10000;
+cantidad=1000;
 medicion=zeros(2,cantidad);
 for i=0:cantidad-1
 inicial=tic;
 medicion(1,i+1)=str2double(fscanf(s));
 medicion(2,i+1)=toc(inicial);
 end
-EscribirSerial(s,255);
+%EscribirSerial(s,255);
+Env_instruccion(s,'stop');
 %
 medicion2=zeros(1,cantidad/2);
 i=1;i2=1;
@@ -98,8 +98,11 @@ medicion3(i)=medicion3(i)+medicion(1,i-q);
 i=i+1;
 end
 %mean(medicion2)
-%freq=16e6./medicion3(16:cantidad-1);
-freq=16e6./medicion2;
+%para medir PWM
+%freq=16e6./medicion3(16:cantidad-1); 
+%Para medir una señal cualquiera
+freq=8*16e6./medicion3(16:cantidad-1); 
+%freq=16e6./medicion2;
 %freq=16e6./medicion(1,:);
 plot(freq)
 disp('rpm')
@@ -110,6 +113,9 @@ desvio=std(freq)
 disp("porcenjate del desvio")
 (desvio/media)*100
 %std(medicion2)
+name=datestr(now,'yymmddhhMMss');
+name=strcat(name,'.mat');
+%save(name,'medicion','medicion3','medicion2') 
 
 %%
 fclose(s)

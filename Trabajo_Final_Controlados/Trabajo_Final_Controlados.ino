@@ -9,6 +9,13 @@ Controlados controlados1;
 // #   #   #   # Definiciones 
 #define interruptON bitSet(SREG,7) //habilita las interrupciones globales
 #define interruptOFF bitClear(SREG,7)//desactiva las interrupciones globales
+#define ins_PWM 250 // instrucciones traducidas. 
+#define ins_trama 253
+#define ins_online 252
+#define ins_stop 251 // baja de transmitir online
+#define ins_test 249
+
+
 // #   #   #   # Constantes 
 const int cantMarcasEncoder = 8; //Es la cantidad de huecos que tiene el encoder de cada motor.
 const int FsEncoders = 2000;//8000 2000
@@ -112,24 +119,24 @@ void serialEvent() { // esta funcion se activa sola, es por interrupciones (pone
     dato= Serial.read();
     if(trama_activa==0){
       switch (dato){
-        case 253://Instrucción 253: transmitir con identificador de trama.
+        case ins_trama://Instrucción 253: transmitir con identificador de trama.
           online=false;
           tx_activada=true;
           break;
-        case 252://Instrucción 252: transmitir sin identificador de trama.
+        case ins_online://Instrucción 252: transmitir sin identificador de trama.
           online=true;
           tx_activada=true;
           break;
-        case 251://Instrucción 251: cortar transmición
+        case ins_stop://Instrucción 251: cortar transmición
           tx_activada=false;
           break;
-        case 250://Instrucción 250: cambiar PWM de los motores
+        case ins_PWM://Instrucción 250: cambiar PWM de los motores
           trama_activa=1;
           break;
-        case 249://Instrucción 249: iniciar
-          iniciar=true;
+        case ins_test://Instrucción 249: iniciar $quitar si no se usa
+          Serial.println(170,DEC);
         default://No hace nada si no recibe una instrucción válida
-          break;}
+          break;}      
     }
     else if (trama_activa==1){//Si trama_activa=1 es porque estaba esperando a recibir el nuevo valor de PWM del motor A
       PWMA=dato;
@@ -137,8 +144,7 @@ void serialEvent() { // esta funcion se activa sola, es por interrupciones (pone
     }
     else if (trama_activa==2){//Si trama_activa=2 es porque estaba esperando a recibir el nuevo valor de PWM del motor B
       PWMB=dato;
-      trama_activa=0;//Le indico al nano que terminé, por lo que el próximo byte que reciba debería ser una nueva instrucción.
-      //Serial.println(170,DEC);
+      trama_activa=0;//Le indico al nano que terminé, por lo que el próximo byte que reciba debería ser una nueva instrucción.      
       controlados1.actualizarDutyCycleMotores(PWMA,PWMB);//Realizo la actualización simultánea de la velocidad de ambos motores.
       controlados1.modoAdelante();
     }
