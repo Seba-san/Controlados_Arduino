@@ -7,13 +7,48 @@ addpath('/home/seba/Dropbox/Facultad/Trabajo_final_Controlados/Codigos/Matlab');
 % uart = serial('COM2','BaudRate',1200,'DataBits',7);
 %s = serial('COM5');
 % Hay que agregar el path!!
-s=InicializacionSerial('/dev/ttyUSB1',115200);%2000000);
+s=InicializacionSerial('/dev/ttyUSB0',115200);%2000000);
 
 
 %% Fin
 fclose(s)
 %clear all;clc
 disp('Puerto Cerrado')
+%%
+dato(1)=10;
+dato(2)=50;
+Env_instruccion(s,'PWM',dato);
+
+
+
+
+
+%% Barrido de pwm
+
+
+for i=0:100
+    lala=tic;
+while toc(lala)<1 end
+i
+EscribirSerial(s,250);
+EscribirSerial(s,i);
+EscribirSerial(s,0);
+salida=str2num(fscanf(s));
+end
+
+for i=100:-1:0
+    lala=tic;
+while toc(lala)<1 end
+i
+EscribirSerial(s,250);
+EscribirSerial(s,i);
+EscribirSerial(s,0);
+salida=str2num(fscanf(s));
+end
+
+
+
+
 %% Tx y Rx
 medicion=zeros(1,16);
 

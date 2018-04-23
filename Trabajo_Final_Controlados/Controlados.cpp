@@ -15,7 +15,7 @@ Librería para el Trabajo Final de Controlados
 #define In1B 8
 #define In2B 12
 #define STBY 7
-#define tope 0.5//Este valor va de 0 a 1 y me indica el dutycycle máx permitido
+#define tope 0//Este valor va de 0 a 1 y me indica el dutycycle máx permitido
                 //Como estoy trabajando en modo invertido los PWM, pongo _TOP*tope
 				//como valor mínimo. Así, para un dutycycle máx de 80%, tope debe
 				//valer 0.2.

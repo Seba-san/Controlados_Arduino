@@ -36,6 +36,7 @@ unsigned long cuenta;
 unsigned char trama_activa=0;//Lo pongo en unsigned char para que ocupe 1 byte (int ocupa 2)
 bool online;//Me indica si poner o no el identificador para la transmisión (online=true no lo transmite para ahorrar tiempo)
 bool tx_activada;//Me indica si transmitir o no.
+bool iniciar=false; // le dice al micro cuando puede iniciar.
 int PWMA;int PWMB;//Acá guardo los valores de nuevos de PWM que me mada Matlab para que actualice. La actualización efectiva se hace cuando tengo estos dos valores.
 int cantOVerflow=0;//Variable que almacena la cantidad de veces que se desbordó el timer2 hasta que vuelvo a tener interrupción por pin de entrada. Esto permite realizar la medición de 
                   //tiempos entre aujeros del encoder.                                                                              
@@ -69,22 +70,27 @@ Serial.begin(115200); // Si se comunica a mucha velocidad se producen errores (q
  controlados1.modoStop();
  controlados1.configTimerMotores();
  controlados1.configTimer2Contador(FsEncoders,preescaler,1);//Configuro el timer2 como contador con interrupción. La frecuencia va desde 500000 hasta 1997.   
- controlados1.actualizarDutyCycleMotores(70,30);
+ controlados1.actualizarDutyCycleMotores(0,0);
  controlados1.modoAdelante();
 
   interruptON;//Activo las interrupciones
   pinMode(A0, INPUT);
   // $Prueba
-  pinMode(SalidaTest, OUTPUT);
-  pinMode(SalidaTest2, OUTPUT);
-  pinMode(SalidaTest3, OUTPUT);
+  //pinMode(SalidaTest, OUTPUT);
+  //pinMode(SalidaTest2, OUTPUT);
+  //pinMode(SalidaTest3, OUTPUT);
 
 }
 
 void loop() {
   NOP;
-controlados1.actualizarDutyCycleMotores(0,0);
-controlados1.modoAdelante();
+
+  //while (!iniciar) {
+   //  NOP;
+  //}
+  
+//controlados1.actualizarDutyCycleMotores(0,0);
+//controlados1.modoAdelante();
 if (bitRead(Bandera,0)){ // timer 2 overflow
   } 
   if (bitRead(Bandera,1)){ // Entra cuando no registra cambio en la entrada
@@ -120,6 +126,8 @@ void serialEvent() { // esta funcion se activa sola, es por interrupciones (pone
         case 250://Instrucción 250: cambiar PWM de los motores
           trama_activa=1;
           break;
+        case 249://Instrucción 249: iniciar
+          iniciar=true;
         default://No hace nada si no recibe una instrucción válida
           break;}
     }
@@ -130,7 +138,9 @@ void serialEvent() { // esta funcion se activa sola, es por interrupciones (pone
     else if (trama_activa==2){//Si trama_activa=2 es porque estaba esperando a recibir el nuevo valor de PWM del motor B
       PWMB=dato;
       trama_activa=0;//Le indico al nano que terminé, por lo que el próximo byte que reciba debería ser una nueva instrucción.
+      //Serial.println(170,DEC);
       controlados1.actualizarDutyCycleMotores(PWMA,PWMB);//Realizo la actualización simultánea de la velocidad de ambos motores.
+      controlados1.modoAdelante();
     }
   }
 }
@@ -210,6 +220,7 @@ unsigned long suma=0;
      bufferVel[2*cantMarcasEncoder-1]=0;
   }   
 
+suma=suma+ bufferVel[2*cantMarcasEncoder-1];
 // ################## Parte del codigo funcional con la version: commit b162d5d7e01e02d2daadd90df3ba0800cd0464f5
   freq=float(F_CPU)/(bufferVel[15]+bufferVel[14]);
   b=100-freq;
